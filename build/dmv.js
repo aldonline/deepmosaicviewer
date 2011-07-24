@@ -295,11 +295,11 @@ exports.extname = function(path) {
     return module.exports;
 };
 
-require.modules["/main.coffee"] = function () {
+require.modules["/dmv.coffee"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
     var __dirname = "/";
-    var __filename = "/main.coffee";
+    var __filename = "/dmv.coffee";
     
     var require = function (file) {
         return __require(file, "/");
@@ -310,30 +310,171 @@ require.modules["/main.coffee"] = function () {
     };
     
     require.modules = __require.modules;
-    __require.modules["/main.coffee"]._cached = module.exports;
+    __require.modules["/dmv.coffee"]._cached = module.exports;
     
     (function () {
         (function() {
-  var core, mock, test1, util;
-  util = require('./util/util');
+  var core, mock;
   core = require('./core');
   mock = require('./data/mock');
-  test1 = function() {
-    return $(function() {
-      var mc;
-      mc = new core.MosaicContainer('viewer');
-      $(mc).bind('change', function() {
-        return console.log(['MosaicContainer.change!', mc.current_cell]);
-      });
-      return mc.set(mock.source);
-    });
-  };
-  exports.test1 = test1;
+  exports.MosaicContainer = core.MosaicContainer;
+  exports.mock_source = mock.source;
 }).call(this);
 ;
     }).call(module.exports);
     
-    __require.modules["/main.coffee"]._cached = module.exports;
+    __require.modules["/dmv.coffee"]._cached = module.exports;
+    return module.exports;
+};
+
+require.modules["/core.coffee"] = function () {
+    var module = { exports : {} };
+    var exports = module.exports;
+    var __dirname = "/";
+    var __filename = "/core.coffee";
+    
+    var require = function (file) {
+        return __require(file, "/");
+    };
+    
+    require.resolve = function (file) {
+        return __require.resolve(name, "/");
+    };
+    
+    require.modules = __require.modules;
+    __require.modules["/core.coffee"]._cached = module.exports;
+    
+    (function () {
+        (function() {
+  var CellHover, DEBUG, FOUND, Mosaic, MosaicContainer, NOT_FOUND, PENDING, SEARCHING, cell_service_module, sd, sdutil, util;
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  sd = Seadragon;
+  util = require('./util/util');
+  sdutil = require('./util/seadragon_util');
+  cell_service_module = require('./cell_service');
+  SEARCHING = '#ff0';
+  FOUND = '#0f0';
+  NOT_FOUND = '#f00';
+  PENDING = {};
+  DEBUG = false;
+  MosaicContainer = (function() {
+    MosaicContainer.current_cell = null;
+    function MosaicContainer(container_id) {
+      this.container_id = container_id;
+      this.container = $('#' + this.container_id);
+      this.viewer = new sd.Viewer(this.container_id);
+      this.highlighter = new sdutil.Highlighter(this.viewer);
+    }
+    MosaicContainer.prototype.set = function(source) {
+      var cm;
+      if ((cm = this.current_mosaic) != null) {
+        $(cm).unbind('change');
+        cm.destroy();
+      }
+      cm = this.current_mosaic = new Mosaic(this, source);
+      $(cm).bind('change', __bind(function() {
+        this.current_cell = cm.current_cell;
+        return $(this).trigger('change');
+      }, this));
+      return cm.setup();
+    };
+    return MosaicContainer;
+  })();
+  Mosaic = (function() {
+    function Mosaic(mosaic_container, source) {
+      this.mosaic_container = mosaic_container;
+      this.source = source;
+    }
+    Mosaic.prototype.setup = function() {
+      var cs, highlighter, viewer;
+      cs = new cell_service_module.CellService(this.source);
+      viewer = this.mosaic_container.viewer;
+      highlighter = this.mosaic_container.highlighter;
+      this.current_cell = null;
+      this.open_handler = __bind(function() {
+        var bucket_manager, current_hover;
+        bucket_manager = new sdutil.BufferedGridManager(viewer, 50, 100);
+        current_hover = null;
+        return $(bucket_manager).bind('change', __bind(function(event) {
+          var bucket;
+          bucket = bucket_manager.cell;
+          if (this.current_cell != null) {
+            if ((bucket != null) && this.current_cell.contains_bucket(bucket.x, bucket.y)) {
+              return;
+            } else {
+              this.current_cell = null;
+              highlighter.draw(null);
+              $(this).trigger('change');
+            }
+          }
+          if (current_hover != null) {
+            current_hover.cancel();
+            $(current_hover).unbind('change');
+          }
+          if (bucket != null) {
+            current_hover = new CellHover(bucket, cs, bucket_manager.mapper, highlighter);
+            $(current_hover).bind('change', __bind(function() {
+              if (this.current_cell !== current_hover.cell) {
+                this.current_cell = current_hover.cell;
+                return $(this).trigger('change');
+              }
+            }, this));
+            return current_hover.start();
+          }
+        }, this));
+      }, this);
+      viewer.addEventListener('open', this.open_handler);
+      return viewer.openDzi(this.source.dzi_url, this.source.dzi_str);
+    };
+    Mosaic.prototype.destroy = function() {
+      return this.mosaic_container.viewer.removeEventListener('open', this.open_handler);
+    };
+    return Mosaic;
+  })();
+  CellHover = (function() {
+    function CellHover(bucket, cell_service, mapper, highlighter) {
+      this.bucket = bucket;
+      this.cell_service = cell_service;
+      this.mapper = mapper;
+      this.highlighter = highlighter;
+      this.cell = null;
+    }
+    CellHover.prototype.start = function() {
+      var answered, rect;
+      if (this.bucket != null) {
+        rect = this.mapper.cell2rect(this.bucket);
+        answered = false;
+        this.cell_service.get_cell(this.bucket.x, this.bucket.y, __bind(function(c) {
+          if (this._canceled) {
+            return;
+          }
+          answered = true;
+          if (c != null) {
+            this.highlighter.draw(c.get_rect(this.mapper), FOUND);
+          } else {
+            this.highlighter.draw(rect, NOT_FOUND);
+          }
+          this.cell = c;
+          return $(this).trigger('change');
+        }, this));
+        if (!answered) {
+          return this.highlighter.draw(rect, SEARCHING);
+        }
+      } else {
+        return this.highlighter.draw(null);
+      }
+    };
+    CellHover.prototype.cancel = function() {
+      return this._canceled = true;
+    };
+    return CellHover;
+  })();
+  exports.MosaicContainer = MosaicContainer;
+}).call(this);
+;
+    }).call(module.exports);
+    
+    __require.modules["/core.coffee"]._cached = module.exports;
     return module.exports;
 };
 
@@ -579,157 +720,6 @@ require.modules["/util/util.coffee"] = function () {
     }).call(module.exports);
     
     __require.modules["/util/util.coffee"]._cached = module.exports;
-    return module.exports;
-};
-
-require.modules["/core.coffee"] = function () {
-    var module = { exports : {} };
-    var exports = module.exports;
-    var __dirname = "/";
-    var __filename = "/core.coffee";
-    
-    var require = function (file) {
-        return __require(file, "/");
-    };
-    
-    require.resolve = function (file) {
-        return __require.resolve(name, "/");
-    };
-    
-    require.modules = __require.modules;
-    __require.modules["/core.coffee"]._cached = module.exports;
-    
-    (function () {
-        (function() {
-  var CellHover, DEBUG, FOUND, Mosaic, MosaicContainer, NOT_FOUND, PENDING, SEARCHING, cell_service_module, sd, sdutil, util;
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-  sd = Seadragon;
-  util = require('./util/util');
-  sdutil = require('./util/seadragon_util');
-  cell_service_module = require('./cell_service');
-  SEARCHING = '#ff0';
-  FOUND = '#0f0';
-  NOT_FOUND = '#f00';
-  PENDING = {};
-  DEBUG = false;
-  MosaicContainer = (function() {
-    MosaicContainer.current_cell = null;
-    function MosaicContainer(container_id) {
-      this.container_id = container_id;
-      this.container = $('#' + this.container_id);
-      this.viewer = new sd.Viewer(this.container_id);
-      this.highlighter = new sdutil.Highlighter(this.viewer);
-    }
-    MosaicContainer.prototype.set = function(source) {
-      var cm;
-      if ((cm = this.current_mosaic) != null) {
-        $(cm).unbind('change');
-        cm.destroy();
-      }
-      cm = this.current_mosaic = new Mosaic(this, source);
-      $(cm).bind('change', __bind(function() {
-        this.current_cell = cm.current_cell;
-        return $(this).trigger('change');
-      }, this));
-      return cm.setup();
-    };
-    return MosaicContainer;
-  })();
-  Mosaic = (function() {
-    function Mosaic(mosaic_container, source) {
-      this.mosaic_container = mosaic_container;
-      this.source = source;
-    }
-    Mosaic.prototype.setup = function() {
-      var cs, highlighter, viewer;
-      cs = new cell_service_module.CellService(this.source);
-      viewer = this.mosaic_container.viewer;
-      highlighter = this.mosaic_container.highlighter;
-      this.current_cell = null;
-      this.open_handler = __bind(function() {
-        var bucket_manager, current_hover;
-        bucket_manager = new sdutil.BufferedGridManager(viewer, 50, 100);
-        current_hover = null;
-        return $(bucket_manager).bind('change', __bind(function(event) {
-          var bucket;
-          bucket = bucket_manager.cell;
-          if (this.current_cell != null) {
-            if ((bucket != null) && this.current_cell.contains_bucket(bucket.x, bucket.y)) {
-              return;
-            } else {
-              this.current_cell = null;
-              highlighter.draw(null);
-              $(this).trigger('change');
-            }
-          }
-          if (current_hover != null) {
-            current_hover.cancel();
-            $(current_hover).unbind('change');
-          }
-          if (bucket != null) {
-            current_hover = new CellHover(bucket, cs, bucket_manager.mapper, highlighter);
-            $(current_hover).bind('change', __bind(function() {
-              if (this.current_cell !== current_hover.cell) {
-                this.current_cell = current_hover.cell;
-                return $(this).trigger('change');
-              }
-            }, this));
-            return current_hover.start();
-          }
-        }, this));
-      }, this);
-      viewer.addEventListener('open', this.open_handler);
-      return viewer.openDzi(this.source.dzi_url, this.source.dzi_str);
-    };
-    Mosaic.prototype.destroy = function() {
-      return this.mosaic_container.viewer.removeEventListener('open', this.open_handler);
-    };
-    return Mosaic;
-  })();
-  CellHover = (function() {
-    function CellHover(bucket, cell_service, mapper, highlighter) {
-      this.bucket = bucket;
-      this.cell_service = cell_service;
-      this.mapper = mapper;
-      this.highlighter = highlighter;
-      this.cell = null;
-    }
-    CellHover.prototype.start = function() {
-      var answered, rect;
-      if (this.bucket != null) {
-        rect = this.mapper.cell2rect(this.bucket);
-        answered = false;
-        this.cell_service.get_cell(this.bucket.x, this.bucket.y, __bind(function(c) {
-          if (this._canceled) {
-            return;
-          }
-          answered = true;
-          if (c != null) {
-            this.highlighter.draw(c.get_rect(this.mapper), FOUND);
-          } else {
-            this.highlighter.draw(rect, NOT_FOUND);
-          }
-          this.cell = c;
-          return $(this).trigger('change');
-        }, this));
-        if (!answered) {
-          return this.highlighter.draw(rect, SEARCHING);
-        }
-      } else {
-        return this.highlighter.draw(null);
-      }
-    };
-    CellHover.prototype.cancel = function() {
-      return this._canceled = true;
-    };
-    return CellHover;
-  })();
-  exports.MosaicContainer = MosaicContainer;
-}).call(this);
-;
-    }).call(module.exports);
-    
-    __require.modules["/core.coffee"]._cached = module.exports;
     return module.exports;
 };
 
@@ -1005,7 +995,6 @@ require.modules["/cell_service.coffee"] = function () {
     }
     CellService.prototype.get_cell = function(x, y, cb) {
       var key;
-      console.log(['get_cell', x, y]);
       key = x + '_' + y;
       if (this.cache[key] !== void 0) {
         return cb(this.cache[key]);
