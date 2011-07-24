@@ -18,6 +18,7 @@ In a nutshell:
 * Create a new DMV by passing in the ID of a container ( a div )
 * Pass on a datasource object. This contains the DZI url and some callbacks that you must implement:
 
+
     datasource =
       dzi_url : 'http://conobox.com/TSO/flags/latest/cl.xml'
       # We include the XML contents here to avoid a cross-domain XHR to the conobox server
@@ -27,6 +28,7 @@ In a nutshell:
       by_ids : ( ids, cb ) ->
       by_coords : ( x, y, cb ) ->
       by_rect : ( x, y, w, h, cb ) ->
+
 
 Notes:
 
