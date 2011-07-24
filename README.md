@@ -1,4 +1,4 @@
-Deep Mosaic Viewer
+# Deep Mosaic Viewer
 
 Based on Seadragon, provides extra features to operate with mosaics.
 Mosaics are DeepZoom images that are made of tiles of multiple images, where each image is itself an object.
@@ -8,27 +8,26 @@ The DMV also takes a service object, containing a set of async query methods. Th
 
 ## Usage
 
-Dependencies
+Take a look at: /example1.html
 
-* Seadragon JS
-* jQuery
+You fill find dmv.js in the /build directory
 
-Then include the script in /build/dmv.js
+In a nutshell:
 
-( this script is built using some nodejs magic, and it will create one global function called require )
+* Include the necesary scripts ( seadragon, jquery, dmv )
+* Create a new DMV by passing in the ID of a container ( a div )
+* Pass on a datasource object. This contains the DZI url and some callbacks that you must implement:
 
+    datasource =
+      dzi_url : 'http://conobox.com/TSO/flags/latest/cl.xml'
+      # We include the XML contents here to avoid a cross-domain XHR to the conobox server
+      # as it won't allow it. This is optional
+      dzi_str: '<Image xmlns="http://schemas.microsoft.com/deepzoom/2008" TileSize="254" Overlap="1" Format="jpg"><Size Width="7500" Height="5000"/></Image>'
+      by_id : ( id, cb ) ->
+      by_ids : ( ids, cb ) ->
+      by_coords : ( x, y, cb ) ->
+      by_rect : ( x, y, w, h, cb ) ->
 
+Notes:
 
-
-Create a new DMV by passing in the ID of a container.
-
-now, pass on a datasource object. IT must contain the following fields.
-
-You can pass many different datasource objects over the lifetime of a viewer.
-
-
-
-While the "widget" can be compiled into one javascript file, we contain it within a node.js project to use node's code testing and package management abilities.
-
-Usage
-
+* You can pass many different datasource objects over the lifetime of a viewer, it will reload the images, etc
