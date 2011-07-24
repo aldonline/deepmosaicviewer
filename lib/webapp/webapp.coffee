@@ -16,10 +16,12 @@ server.use express.compiler src: pub, enable: ['less']
 server.use express.static pub
 
 # serve the javascript API
-server.use browserify 
-  require: __dirname + '/../dmv/main'
+b = browserify 
+  require: __dirname + '/../dmv/dmv'
   mount: '/dmv.js'
   watch: yes
+
+server.use b
 
 server.get '/', (req, res) ->
   res.render 'home'

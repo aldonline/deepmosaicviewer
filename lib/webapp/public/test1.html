@@ -6,7 +6,14 @@
         <script src="/js-lib/jquery-1.4.4.min.js"></script>
         <script src="/dmv.js"></script>
         <script>
-            require('./main').test1()
+            var dmv = require('./dmv')
+            $(function(){
+                var mc = new dmv.MosaicContainer('viewer')
+                $(mc).bind('change',function(){
+                  console.log( ['MosaicContainer.change!', mc.current_cell] )
+                })
+                mc.set( dmv.mock_source )
+            })
         </script>
     </head>
     <p>Welcome to test 1</p>

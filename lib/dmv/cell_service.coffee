@@ -36,7 +36,6 @@ class CellService
     @cells = []
     @cache = {}
   get_cell : ( x, y, cb ) ->
-    console.log ['get_cell', x, y]
     key = x + '_' + y
     unless @cache[key] is undefined
       cb @cache[key]
