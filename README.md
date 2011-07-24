@@ -8,9 +8,9 @@ The DMV also takes a service object, containing a set of async query methods. Th
 
 ## Usage
 
-Take a look at: /example1.html
+Take a look at: `/example1.html`
 
-You fill find dmv.js in the /build directory
+You fill find `dmv.js` in the `/build` directory
 
 In a nutshell:
 
