@@ -12,9 +12,19 @@
                 $(mc).bind('change',function(){
                   console.log( ['MosaicContainer.change!', mc.current_cell] )
                 })
+                // set mock data source
                 mc.set( dmv.mock_source )
+                
+                // if you click this button
+                // the viewer will zoom to cell with id = 2
+                $('#test-btn').click(function(){
+                    mc.go_to( 2 )
+                })
+                
+                
             })
         </script>
     </head>
     <div id="viewer"></div>
+    <button id="test-btn">Center Over ID=1</button>
 </html>

@@ -26,6 +26,8 @@ class MosaicContainer
       @current_cell = cm.current_cell
       $(@).trigger 'change'
     cm.setup()
+  go_to: ( id ) ->
+    @current_mosaic?.go_to id
 
 class Mosaic
   constructor: (@mosaic_container, @source) ->
@@ -35,7 +37,7 @@ class Mosaic
     highlighter = @mosaic_container.highlighter
     @current_cell = null
     @open_handler = =>
-      bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
+      @bm = bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
       current_hover = null
       $(bucket_manager).bind 'change', (event) => # every time a bucket changes...
         bucket = bucket_manager.cell
@@ -58,6 +60,25 @@ class Mosaic
           current_hover.start()
     viewer.addEventListener 'open', @open_handler
     viewer.openDzi @source.dzi_url, @source.dzi_str
+  # will try to positio the viewport on the cell that has the given id
+  # returns false if no id was found, etc
+  go_to: ( id ) ->
+    @source.by_id id, (cell) =>
+      if cell?
+        
+        # get the cell's projected rectangle
+        rect = @bm.mapper.cell2rect cell
+        
+        # add a margin ( we make it equal to width, but could be different )
+        margin = rect.width
+        rect.x = rect.x - margin
+        rect.y = rect.y - margin
+        rect.width = rect.width + margin * 2
+        rect.height = rect.height + margin * 2
+        
+        @mosaic_container?.viewer.viewport?.fitBounds rect
+      else
+        no
   destroy: ->
     @mosaic_container.viewer.removeEventListener 'open', @open_handler
 
