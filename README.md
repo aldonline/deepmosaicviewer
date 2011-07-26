@@ -33,3 +33,8 @@ In a nutshell:
 Notes:
 
 * You can pass many different datasource objects over the lifetime of a viewer, it will reload the images, etc
+
+### Events
+
+The MosaicContainer fires a 'change' event, using the jQuery event system.
+This event fires every time the `current_cell` property changes
