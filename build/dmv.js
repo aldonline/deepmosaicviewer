@@ -521,6 +521,44 @@ require.modules["/util/util.coffee"] = function () {
   General utilities and patterns
   */
   /*
+  
+  service = ( query, cb ) -> ...
+  receive = ( result ) -> ...
+  
+  buff = new AsyncCallBuffer service, receive
+  
+  buff.do_exec 'query 1', ( res ) -> ..
+  buff.do_exec 'query 2', ( res ) -> ..
+  buff.do_exec 'query 3', ( res ) -> ..
+  
+  only query3 will fire
+  
+  */  var AsyncCallBuffer, CumulativeSwitch, DeferredExecutor, EqualsValueBuffer, Loop, Square, Tuple2, ValueBuffer, eq, say_hello, to;
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
+    for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
+    function ctor() { this.constructor = child; }
+    ctor.prototype = parent.prototype;
+    child.prototype = new ctor;
+    child.__super__ = parent.prototype;
+    return child;
+  };
+  AsyncCallBuffer = (function() {
+    function AsyncCallBuffer(exec_func, cb_func) {
+      this.exec_func = exec_func;
+      this.cb_func = cb_func;
+    }
+    AsyncCallBuffer.prototype.do_exec = function(arg) {
+      this.current_arg = arg;
+      return this.exec_func(arg, __bind(function(res) {
+        if (this.current_arg === arg) {
+          this.cb_func(res);
+          return delete this.current_arg;
+        }
+      }, this));
+    };
+    return AsyncCallBuffer;
+  })();
+  /*
   cumulative = Increasing or increased in quantity, degree, or force by successive additions.
   
   s = new CumulativeSwitch()
@@ -539,15 +577,7 @@ require.modules["/util/util.coffee"] = function () {
   s.activate()
   // s.is_active = yes
   
-  */  var CumulativeSwitch, DeferredExecutor, EqualsValueBuffer, Loop, Square, Tuple2, ValueBuffer, eq, say_hello, to;
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
-    for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
-    function ctor() { this.constructor = child; }
-    ctor.prototype = parent.prototype;
-    child.prototype = new ctor;
-    child.__super__ = parent.prototype;
-    return child;
-  };
+  */
   CumulativeSwitch = (function() {
     function CumulativeSwitch() {
       this.$ = $(this);
@@ -730,6 +760,7 @@ require.modules["/util/util.coffee"] = function () {
   exports.CumulativeSwitch = CumulativeSwitch;
   exports.ValueBuffer = ValueBuffer;
   exports.EqualsValueBuffer = EqualsValueBuffer;
+  exports.AsyncCallBuffer = AsyncCallBuffer;
   exports.Loop = Loop;
   exports.DeferredExecutor = DeferredExecutor;
   exports.say_hello = say_hello;

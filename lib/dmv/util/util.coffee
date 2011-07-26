@@ -5,6 +5,30 @@ General utilities and patterns
 
 
 ###
+
+service = ( query, cb ) -> ...
+receive = ( result ) -> ...
+
+buff = new AsyncCallBuffer service, receive
+
+buff.do_exec 'query 1', ( res ) -> ..
+buff.do_exec 'query 2', ( res ) -> ..
+buff.do_exec 'query 3', ( res ) -> ..
+
+only query3 will fire
+
+###
+
+class AsyncCallBuffer
+  constructor: ( @exec_func, @cb_func ) ->
+  do_exec: ( arg ) ->
+    @current_arg = arg
+    @exec_func arg, ( res ) =>
+      if @current_arg is arg
+        @cb_func res
+        delete @current_arg
+
+###
 cumulative = Increasing or increased in quantity, degree, or force by successive additions.
 
 s = new CumulativeSwitch()
@@ -131,6 +155,7 @@ exports.Tuple2 = Tuple2
 exports.CumulativeSwitch = CumulativeSwitch
 exports.ValueBuffer = ValueBuffer
 exports.EqualsValueBuffer = EqualsValueBuffer
+exports.AsyncCallBuffer = AsyncCallBuffer
 exports.Loop = Loop
 exports.DeferredExecutor = DeferredExecutor
 exports.say_hello = say_hello
