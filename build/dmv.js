@@ -378,6 +378,10 @@ require.modules["/core.coffee"] = function () {
       }, this));
       return cm.setup();
     };
+    MosaicContainer.prototype.go_to = function(id) {
+      var _ref;
+      return (_ref = this.current_mosaic) != null ? _ref.go_to(id) : void 0;
+    };
     return MosaicContainer;
   })();
   Mosaic = (function() {
@@ -393,7 +397,7 @@ require.modules["/core.coffee"] = function () {
       this.current_cell = null;
       this.open_handler = __bind(function() {
         var bucket_manager, current_hover;
-        bucket_manager = new sdutil.BufferedGridManager(viewer, 50, 100);
+        this.bm = bucket_manager = new sdutil.BufferedGridManager(viewer, 50, 100);
         current_hover = null;
         return $(bucket_manager).bind('change', __bind(function(event) {
           var bucket;
@@ -425,6 +429,22 @@ require.modules["/core.coffee"] = function () {
       }, this);
       viewer.addEventListener('open', this.open_handler);
       return viewer.openDzi(this.source.dzi_url, this.source.dzi_str);
+    };
+    Mosaic.prototype.go_to = function(id) {
+      return this.source.by_id(id, __bind(function(cell) {
+        var margin, rect, _ref, _ref2;
+        if (cell != null) {
+          rect = this.bm.mapper.cell2rect(cell);
+          margin = rect.width;
+          rect.x = rect.x - margin;
+          rect.y = rect.y - margin;
+          rect.width = rect.width + margin * 2;
+          rect.height = rect.height + margin * 2;
+          return (_ref = this.mosaic_container) != null ? (_ref2 = _ref.viewer.viewport) != null ? _ref2.fitBounds(rect) : void 0 : void 0;
+        } else {
+          return false;
+        }
+      }, this));
     };
     Mosaic.prototype.destroy = function() {
       return this.mosaic_container.viewer.removeEventListener('open', this.open_handler);
