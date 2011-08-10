@@ -1,3 +1,5 @@
+Source = require('./source').Source
+
 DELAY = 300
 
 data = """
@@ -34,7 +36,7 @@ get_ids = ( x, y, w, h, cb ) ->
 
 delay = ( cb ) -> setTimeout cb, DELAY
 
-class Source
+class MockSource extends Source
   # 1. indicate the DZI source:
   dzi_url : 'http://conobox.com/TSO/flags/latest/cl.xml'
   # We include the XML contents here to avoid a cross-domain XHR to the conobox server
@@ -64,4 +66,4 @@ class Source
     ids = get_ids x, y, w, h
     cb get_cells ids
 
-exports.source = new Source
+exports.source = new MockSource
