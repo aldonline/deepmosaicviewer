@@ -314,11 +314,13 @@ require.modules["/dmv.coffee"] = function () {
     
     (function () {
         (function() {
-  var core, mock;
+  var core, mock, mosaic_source;
   core = require('./core');
   mock = require('./data/mock');
+  mosaic_source = require('./data/mosaic_source');
   exports.MosaicContainer = core.MosaicContainer;
   exports.mock_source = mock.source;
+  exports.create_mosaic_source = mosaic_source.create;
 }).call(this);
 ;
     }).call(module.exports);
@@ -1105,7 +1107,16 @@ require.modules["/data/mock.coffee"] = function () {
     
     (function () {
         (function() {
-  var DELAY, Source, data, delay, get_cell, get_cells, get_id, get_ids, item, line, matrix;
+  var DELAY, MockSource, Source, data, delay, get_cell, get_cells, get_id, get_ids, item, line, matrix;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
+    for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
+    function ctor() { this.constructor = child; }
+    ctor.prototype = parent.prototype;
+    child.prototype = new ctor;
+    child.__super__ = parent.prototype;
+    return child;
+  };
+  Source = require('./source').Source;
   DELAY = 300;
   data = "00 00 01 02 xx\n00 00 xx 03 xx\nxx xx xx xx 04";
   matrix = (function() {
@@ -1177,21 +1188,24 @@ require.modules["/data/mock.coffee"] = function () {
   delay = function(cb) {
     return setTimeout(cb, DELAY);
   };
-  Source = (function() {
-    function Source() {}
-    Source.prototype.dzi_url = 'http://conobox.com/TSO/flags/latest/cl.xml';
-    Source.prototype.dzi_str = '<Image xmlns="http://schemas.microsoft.com/deepzoom/2008" TileSize="254" Overlap="1" Format="jpg"><Size Width="7500" Height="5000"/></Image>';
-    Source.prototype.by_id = function(id, cb) {
+  MockSource = (function() {
+    __extends(MockSource, Source);
+    function MockSource() {
+      MockSource.__super__.constructor.apply(this, arguments);
+    }
+    MockSource.prototype.dzi_url = 'http://conobox.com/TSO/flags/latest/cl.xml';
+    MockSource.prototype.dzi_str = '<Image xmlns="http://schemas.microsoft.com/deepzoom/2008" TileSize="254" Overlap="1" Format="jpg"><Size Width="7500" Height="5000"/></Image>';
+    MockSource.prototype.by_id = function(id, cb) {
       return delay(function() {
         return cb(get_cell(id));
       });
     };
-    Source.prototype.by_ids = function(ids, cb) {
+    MockSource.prototype.by_ids = function(ids, cb) {
       return delay(function() {
         return cb(get_cells(ids));
       });
     };
-    Source.prototype.by_coords = function(x, y, cb) {
+    MockSource.prototype.by_coords = function(x, y, cb) {
       return delay(function() {
         var id;
         id = get_id(x, y);
@@ -1202,20 +1216,226 @@ require.modules["/data/mock.coffee"] = function () {
         }
       });
     };
-    Source.prototype.by_rect = function(x, y, w, h, cb) {
+    MockSource.prototype.by_rect = function(x, y, w, h, cb) {
       return delay(function() {
         var ids;
         ids = get_ids(x, y, w, h);
         return cb(get_cells(ids));
       });
     };
-    return Source;
+    return MockSource;
   })();
-  exports.source = new Source;
+  exports.source = new MockSource;
 }).call(this);
 ;
     }).call(module.exports);
     
     __require.modules["/data/mock.coffee"]._cached = module.exports;
+    return module.exports;
+};
+
+require.modules["/data/source.coffee"] = function () {
+    var module = { exports : {} };
+    var exports = module.exports;
+    var __dirname = "/data";
+    var __filename = "/data/source.coffee";
+    
+    var require = function (file) {
+        return __require(file, "/data");
+    };
+    
+    require.resolve = function (file) {
+        return __require.resolve(name, "/data");
+    };
+    
+    require.modules = __require.modules;
+    __require.modules["/data/source.coffee"]._cached = module.exports;
+    
+    (function () {
+        (function() {
+  /*
+  Abstract base class for data sources.
+  For a working example, see ./mock
+  */  var Source;
+  Source = (function() {
+    function Source() {}
+    Source.prototype.dzi_url = null;
+    Source.prototype.dzi_str = null;
+    Source.prototype.by_id = function(id, cb) {};
+    Source.prototype.by_ids = function(ids, cb) {};
+    Source.prototype.by_coords = function(x, y, cb) {};
+    Source.prototype.by_rect = function(x, y, w, h, cb) {};
+    return Source;
+  })();
+  exports.Source = Source;
+}).call(this);
+;
+    }).call(module.exports);
+    
+    __require.modules["/data/source.coffee"]._cached = module.exports;
+    return module.exports;
+};
+
+require.modules["/data/mosaic_source.coffee"] = function () {
+    var module = { exports : {} };
+    var exports = module.exports;
+    var __dirname = "/data";
+    var __filename = "/data/mosaic_source.coffee";
+    
+    var require = function (file) {
+        return __require(file, "/data");
+    };
+    
+    require.resolve = function (file) {
+        return __require.resolve(name, "/data");
+    };
+    
+    require.modules = __require.modules;
+    __require.modules["/data/mosaic_source.coffee"]._cached = module.exports;
+    
+    (function () {
+        (function() {
+  var DEBUG, MosaicSource, Source, cbs, create, dbg, rpc, serial;
+  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
+    for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
+    function ctor() { this.constructor = child; }
+    ctor.prototype = parent.prototype;
+    child.prototype = new ctor;
+    child.__super__ = parent.prototype;
+    return child;
+  };
+  Source = require('./source').Source;
+  DEBUG = false;
+  MosaicSource = (function() {
+    __extends(MosaicSource, Source);
+    function MosaicSource(mosaic_id, dzi_url, dzi_str, endpoint, id, version) {
+      this.mosaic_id = mosaic_id;
+      this.dzi_url = dzi_url;
+      this.dzi_str = dzi_str;
+      this.endpoint = endpoint;
+      this.id = id;
+      this.version = version;
+      this.dzi_str = '<Image xmlns="http://schemas.microsoft.com/deepzoom/2008" TileSize="254" Overlap="1" Format="jpg"><Size Width="7500" Height="5000"/></Image>';
+    }
+    MosaicSource.prototype.by_id = function(id, cb) {
+      return this._('find_by_image', [id], function(res) {
+        var r, _i, _len;
+        res = (function() {
+          var _i, _len, _results;
+          _results = [];
+          for (_i = 0, _len = res.length; _i < _len; _i++) {
+            r = res[_i];
+            if (res.id === this.mosaic_id && res.version === this.version) {
+              _results.push(r);
+            }
+          }
+          return _results;
+        }).call(this);
+        for (_i = 0, _len = res.length; _i < _len; _i++) {
+          r = res[_i];
+          r.size = r.cells;
+        }
+        if (res.length === 0) {
+          return cb(null);
+        } else {
+          return cb(res[0]);
+        }
+      });
+    };
+    MosaicSource.prototype.by_ids = function(ids, cb) {
+      throw new Error('tried to call unimplemented method on mosaic source ( by_ids )');
+    };
+    MosaicSource.prototype.by_coords = function(x, y, cb) {
+      return this._('find_by_coord', [this.mosaic_id, this.version, x, y], function(res) {
+        var r, _i, _len;
+        if (res.length === 0) {
+          return cb(null);
+        } else {
+          for (_i = 0, _len = res.length; _i < _len; _i++) {
+            r = res[_i];
+            r.size = r.cells;
+          }
+          return cb(res[0]);
+        }
+      });
+    };
+    MosaicSource.prototype.by_rect = function(x, y, w, h, cb) {
+      return this._('find_by_rect', [this.mosaic_id, this.version, x, y, w, h], function(res) {
+        var r, _i, _len;
+        for (_i = 0, _len = res.length; _i < _len; _i++) {
+          r = res[_i];
+          r.size = r.cells;
+        }
+        return cb(res);
+      });
+    };
+    MosaicSource.prototype._ = function(method, params, cb) {
+      return rpc(this.endpoint, method, params, cb);
+    };
+    return MosaicSource;
+  })();
+  /* 
+  curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "load_test_data", "params": [] }' -H 'content-type: text/plain;' http://localhost:3000/api
+  curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "get_mosaic_info", "params": ["cl"] }' -H 'content-type: text/plain;' http://localhost:3000/api
+  */
+  dbg = function(msg) {
+    if (DEBUG) {
+      try {
+        return console.log(msg);
+      } catch (_e) {}
+    }
+  };
+  serial = 0;
+  cbs = {};
+  rpc = function(endpoint, method, params, cb) {
+    var data, handle_res, id;
+    dbg([endpoint, method, params]);
+    id = serial++;
+    cbs[id] = cb;
+    data = JSON.stringify({
+      method: method,
+      params: params,
+      id: id,
+      jsonrpc: '1.0'
+    });
+    handle_res = function(res) {
+      dbg(['result:', res]);
+      cbs[id](res.result);
+      return delete cbs[id];
+    };
+    return jQuery.post(endpoint, data, handle_res, 'json');
+  };
+  create = function(endpoint, id, version, cb) {
+    return rpc(endpoint, 'get_mosaic_info', [id], function(res) {
+      var source, v, _i, _len, _ref, _v;
+      if (version != null) {
+        v = null;
+        _ref = res.versions;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          _v = _ref[_i];
+          if (v.version === version) {
+            v = _v;
+            break;
+          }
+        }
+      } else {
+        if (res.versions.length !== 0) {
+          v = res.versions.pop();
+        }
+      }
+      if (v === null) {
+        return cb('requested mosaic version not found', null);
+      } else {
+        source = new MosaicSource(id, v.url, null, endpoint, id, v.version);
+        return cb(null, source);
+      }
+    });
+  };
+  exports.create = create;
+}).call(this);
+;
+    }).call(module.exports);
+    
+    __require.modules["/data/mosaic_source.coffee"]._cached = module.exports;
     return module.exports;
 };

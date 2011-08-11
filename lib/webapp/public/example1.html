@@ -7,20 +7,28 @@
         <script src="/dmv.js"></script>
         <script>
             var dmv = require('./dmv')
+
             $(function(){
                 var mc = new dmv.MosaicContainer('viewer')
                 $(mc).bind('change',function(){
                   console.log( ['MosaicContainer.change!', mc.current_cell] )
                 })
+                
                 // set mock data source
-                mc.set( dmv.mock_source )
+                // mc.set( dmv.mock_source )
+                
+                // set mosaic datasource
+                var endpoint = 'http://tso-gen.herokuapp.com/api'
+                // endpoint = 'http://localhost:3000/api'
+                dmv.create_mosaic_source( endpoint, 'cl', null, function( err, res ){
+                    mc.set( res )
+                })
                 
                 // if you click this button
                 // the viewer will zoom to cell with id = 2
                 $('#test-btn').click(function(){
                     mc.go_to( 2 )
                 })
-                
                 
             })
         </script>
