@@ -2,6 +2,18 @@ Source = require('./source').Source
 
 DEBUG = no
 
+# transforms result objects form the server API to the format required
+# by the client. There are slight differences
+# TODO: consider modifying the generator API to resemble this API, or viceversa
+massage = ( objs ) ->
+  for obj in objs
+    obj.size = obj.cells
+    obj.id = obj.image
+    # no need to delete, but I'm a maniac...
+    delete obj.cells
+    delete obj.image
+    delete obj.side
+
 class MosaicSource extends Source
   
   constructor: ( @mosaic_id, @dzi_url, @dzi_str, @endpoint, @id, @version ) ->
@@ -13,10 +25,7 @@ class MosaicSource extends Source
     @_ 'find_by_image', [id], ( res ) ->
       # filter out results for other mosaics/versions
       res = ( r for r in res when ( res.id is @mosaic_id and res.version is @version ) )
-      # massage data object. slight changes
-      # TODO: consider modifying the generator API to resemble this API, or viceversa
-      for r in res
-        r.size = r.cells
+      massage res
       # return first image found or null
       if res.length is 0
         cb null
@@ -32,16 +41,14 @@ class MosaicSource extends Source
       if res.length is 0
         cb null
       else
-        for r in res
-          r.size = r.cells
+        massage res
         cb res[0]
   
   # instead of asking for each coordinate,
   # this allows you to ask for a region ( save some requests )
   by_rect : ( x, y, w, h, cb ) ->
     @_ 'find_by_rect', [@mosaic_id, @version, x, y, w, h], (res) ->
-      for r in res
-        r.size = r.cells
+      massage res
       cb res
 
   _: ( method, params, cb ) -> rpc @endpoint, method, params, cb

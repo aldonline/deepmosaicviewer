@@ -1295,7 +1295,7 @@ require.modules["/data/mosaic_source.coffee"] = function () {
     
     (function () {
         (function() {
-  var DEBUG, MosaicSource, Source, cbs, create, dbg, rpc, serial;
+  var DEBUG, MosaicSource, Source, cbs, create, dbg, massage, rpc, serial;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
@@ -1306,6 +1306,19 @@ require.modules["/data/mosaic_source.coffee"] = function () {
   };
   Source = require('./source').Source;
   DEBUG = false;
+  massage = function(objs) {
+    var obj, _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = objs.length; _i < _len; _i++) {
+      obj = objs[_i];
+      obj.size = obj.cells;
+      obj.id = obj.image;
+      delete obj.cells;
+      delete obj.image;
+      _results.push(delete obj.side);
+    }
+    return _results;
+  };
   MosaicSource = (function() {
     __extends(MosaicSource, Source);
     function MosaicSource(mosaic_id, dzi_url, dzi_str, endpoint, id, version) {
@@ -1319,7 +1332,7 @@ require.modules["/data/mosaic_source.coffee"] = function () {
     }
     MosaicSource.prototype.by_id = function(id, cb) {
       return this._('find_by_image', [id], function(res) {
-        var r, _i, _len;
+        var r;
         res = (function() {
           var _i, _len, _results;
           _results = [];
@@ -1331,10 +1344,7 @@ require.modules["/data/mosaic_source.coffee"] = function () {
           }
           return _results;
         }).call(this);
-        for (_i = 0, _len = res.length; _i < _len; _i++) {
-          r = res[_i];
-          r.size = r.cells;
-        }
+        massage(res);
         if (res.length === 0) {
           return cb(null);
         } else {
@@ -1347,25 +1357,17 @@ require.modules["/data/mosaic_source.coffee"] = function () {
     };
     MosaicSource.prototype.by_coords = function(x, y, cb) {
       return this._('find_by_coord', [this.mosaic_id, this.version, x, y], function(res) {
-        var r, _i, _len;
         if (res.length === 0) {
           return cb(null);
         } else {
-          for (_i = 0, _len = res.length; _i < _len; _i++) {
-            r = res[_i];
-            r.size = r.cells;
-          }
+          massage(res);
           return cb(res[0]);
         }
       });
     };
     MosaicSource.prototype.by_rect = function(x, y, w, h, cb) {
       return this._('find_by_rect', [this.mosaic_id, this.version, x, y, w, h], function(res) {
-        var r, _i, _len;
-        for (_i = 0, _len = res.length; _i < _len; _i++) {
-          r = res[_i];
-          r.size = r.cells;
-        }
+        massage(res);
         return cb(res);
       });
     };
