@@ -26,6 +26,9 @@
                 
                 // if you click this button
                 // the viewer will zoom to cell with id = 2
+                // note that, if using the mosaic data source, for example
+                // cell IDs will be URLs. ( because the service uses URLs as IDs )
+                // This viewer does not care. It treats all IDs as obscure identity tokens
                 $('#test-btn').click(function(){
                     mc.go_to( 2 )
                 })
@@ -34,5 +37,5 @@
         </script>
     </head>
     <div id="viewer"></div>
-    <button id="test-btn">Center Over ID=1</button>
+    <button id="test-btn">Center Over ID=2</button>
 </html>
