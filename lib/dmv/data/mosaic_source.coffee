@@ -22,7 +22,7 @@ class MosaicSource extends Source
   
   # id --> one Cell or null
   by_id : ( id, cb ) ->
-    @_ 'find_by_image', [id], ( res ) ->
+    @_ 'find_by_image', [@mosaic_id, @version, id], ( res ) ->
       # filter out results for other mosaics/versions
       res = ( r for r in res when ( res.id is @mosaic_id and res.version is @version ) )
       massage res

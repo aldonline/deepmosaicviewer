@@ -1331,7 +1331,7 @@ require.modules["/data/mosaic_source.coffee"] = function () {
       this.dzi_str = '<Image xmlns="http://schemas.microsoft.com/deepzoom/2008" TileSize="254" Overlap="1" Format="jpg"><Size Width="7500" Height="5000"/></Image>';
     }
     MosaicSource.prototype.by_id = function(id, cb) {
-      return this._('find_by_image', [id], function(res) {
+      return this._('find_by_image', [this.mosaic_id, this.version, id], function(res) {
         var r;
         res = (function() {
           var _i, _len, _results;
