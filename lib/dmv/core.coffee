@@ -87,8 +87,6 @@ class Mosaic
 # ( hover, query, result ) and can be cancelled at any time
 # This allows us to make one hover "cancel" the previous one even if the query
 # has not yet arrived
-# TODO: dispatches a 'found' event whenever a cell is found
-# it contains a 'cell' property
 class CellHover
   constructor: ( @bucket, @cell_service, @mapper, @highlighter ) ->
     @cell = null
