@@ -32,7 +32,7 @@ class MosaicContainer
 class Mosaic
   constructor: (@mosaic_container, @source) ->
   setup: ->
-    cs = new cell_service_module.CellService @source
+    @cs = cs = new cell_service_module.CellService @source
     viewer = @mosaic_container.viewer
     highlighter = @mosaic_container.highlighter
     @current_cell = null
@@ -63,11 +63,11 @@ class Mosaic
   # will try to positio the viewport on the cell that has the given id
   # returns false if no id was found, etc
   go_to: ( id ) ->
-    @source.by_id id, (cell) =>
+    @cs.by_id id, (cell) =>
       if cell?
-        
+        mapper = @bm.mapper
         # get the cell's projected rectangle
-        rect = @bm.mapper.cell2rect cell
+        rect = cell.get_rect mapper
         
         # add a margin ( we make it equal to width, but could be different )
         margin = rect.width
@@ -76,6 +76,25 @@ class Mosaic
         rect.width = rect.width + margin * 2
         rect.height = rect.height + margin * 2
         
+        # TODO: make sure we don't scroll 'out' of the mosaic
+        # this may happen if the image is on or near a border
+        
+        
+        # when we get to the desired position
+        # we should highlight the cell
+        # it appears as if the only way to detect the 'end' of the transition
+        # is by listening to the 'animation_end' event
+        # see: http://expression.microsoft.com/en-us/gg413351
+        # we will implement a simple solution for now
+        # calling go_to should also affect current_hover
+        # but we will get to that later on
+        mc =  @mosaic_container
+        handler = ->
+          mc?.viewer.removeEventListener 'animationfinish', handler
+          mc?.highlighter?.draw cell.get_rect(mapper), FOUND
+        mc?.viewer.addEventListener 'animationfinish', handler
+        
+        # start animation
         @mosaic_container?.viewer.viewport?.fitBounds rect
       else
         no

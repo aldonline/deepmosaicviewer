@@ -19,7 +19,7 @@
                 
                 // set mosaic datasource
                 var endpoint = 'http://tso-gen.herokuapp.com/api'
-                // endpoint = 'http://localhost:3000/api'
+                endpoint = 'http://localhost:3000/api'
                 dmv.create_mosaic_source( endpoint, 'cl', null, function( err, res ){
                     mc.set( res )
                 })
@@ -30,7 +30,7 @@
                 // cell IDs will be URLs. ( because the service uses URLs as IDs )
                 // This viewer does not care. It treats all IDs as obscure identity tokens
                 $('#test-btn').click(function(){
-                    mc.go_to( 2 )
+                    mc.go_to( 'http://foo.com/someimage3.png' )
                 })
                 
             })

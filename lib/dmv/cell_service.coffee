@@ -35,6 +35,10 @@ class CellService
   constructor: (@source) ->
     @cells = []
     @cache = {}
+  by_id : ( id, cb ) ->
+    @source.by_id id, ( res ) ->
+      # TODO: cache this too
+      cb new Cell res.x, res.y, res.size, res.id
   get_cell : ( x, y, cb ) ->
     key = x + '_' + y
     unless @cache[key] is undefined

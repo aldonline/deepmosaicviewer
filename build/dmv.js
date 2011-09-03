@@ -393,7 +393,7 @@ require.modules["/core.coffee"] = function () {
     }
     Mosaic.prototype.setup = function() {
       var cs, highlighter, viewer;
-      cs = new cell_service_module.CellService(this.source);
+      this.cs = cs = new cell_service_module.CellService(this.source);
       viewer = this.mosaic_container.viewer;
       highlighter = this.mosaic_container.highlighter;
       this.current_cell = null;
@@ -433,15 +433,27 @@ require.modules["/core.coffee"] = function () {
       return viewer.openDzi(this.source.dzi_url, this.source.dzi_str);
     };
     Mosaic.prototype.go_to = function(id) {
-      return this.source.by_id(id, __bind(function(cell) {
-        var margin, rect, _ref, _ref2;
+      return this.cs.by_id(id, __bind(function(cell) {
+        var handler, mapper, margin, mc, rect, _ref, _ref2;
         if (cell != null) {
-          rect = this.bm.mapper.cell2rect(cell);
+          mapper = this.bm.mapper;
+          rect = cell.get_rect(mapper);
           margin = rect.width;
           rect.x = rect.x - margin;
           rect.y = rect.y - margin;
           rect.width = rect.width + margin * 2;
           rect.height = rect.height + margin * 2;
+          mc = this.mosaic_container;
+          handler = function() {
+            var _ref;
+            if (mc != null) {
+              mc.viewer.removeEventListener('animationfinish', handler);
+            }
+            return mc != null ? (_ref = mc.highlighter) != null ? _ref.draw(cell.get_rect(mapper), FOUND) : void 0 : void 0;
+          };
+          if (mc != null) {
+            mc.viewer.addEventListener('animationfinish', handler);
+          }
           return (_ref = this.mosaic_container) != null ? (_ref2 = _ref.viewer.viewport) != null ? _ref2.fitBounds(rect) : void 0 : void 0;
         } else {
           return false;
@@ -1046,6 +1058,11 @@ require.modules["/cell_service.coffee"] = function () {
       this.cells = [];
       this.cache = {};
     }
+    CellService.prototype.by_id = function(id, cb) {
+      return this.source.by_id(id, function(res) {
+        return cb(new Cell(res.x, res.y, res.size, res.id));
+      });
+    };
     CellService.prototype.get_cell = function(x, y, cb) {
       var key;
       key = x + '_' + y;
