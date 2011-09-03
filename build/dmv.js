@@ -1321,17 +1321,25 @@ require.modules["/data/mosaic_source.coffee"] = function () {
   };
   MosaicSource = (function() {
     __extends(MosaicSource, Source);
-    function MosaicSource(mosaic_id, dzi_url, dzi_str, endpoint, id, version) {
-      this.mosaic_id = mosaic_id;
+    function MosaicSource(dzi_url, dzi_str, endpoint, mosaic_id, version) {
       this.dzi_url = dzi_url;
       this.dzi_str = dzi_str;
       this.endpoint = endpoint;
-      this.id = id;
+      this.mosaic_id = mosaic_id;
       this.version = version;
+      if (this.mosaic_id == null) {
+        throw new Error('mosaic_id cannot be null or undefined');
+      }
+      if (this.dzi_url == null) {
+        throw new Error('dzi_url cannot be null or undefined');
+      }
+      if (this.version == null) {
+        throw new Error('(mosaic) version cannot be null or undefined');
+      }
       this.dzi_str = '<Image xmlns="http://schemas.microsoft.com/deepzoom/2008" TileSize="254" Overlap="1" Format="jpg"><Size Width="7500" Height="5000"/></Image>';
     }
     MosaicSource.prototype.by_id = function(id, cb) {
-      return this._('find_by_image', [this.mosaic_id, this.version, id], function(res) {
+      return this._('find_by_image', [this.mosaic_id, this.version, id], function(err, res) {
         var r;
         res = (function() {
           var _i, _len, _results;
@@ -1356,7 +1364,7 @@ require.modules["/data/mosaic_source.coffee"] = function () {
       throw new Error('tried to call unimplemented method on mosaic source ( by_ids )');
     };
     MosaicSource.prototype.by_coords = function(x, y, cb) {
-      return this._('find_by_coord', [this.mosaic_id, this.version, x, y], function(res) {
+      return this._('find_by_coord', [this.mosaic_id, this.version, x, y], function(err, res) {
         if (res.length === 0) {
           return cb(null);
         } else {
@@ -1366,7 +1374,7 @@ require.modules["/data/mosaic_source.coffee"] = function () {
       });
     };
     MosaicSource.prototype.by_rect = function(x, y, w, h, cb) {
-      return this._('find_by_rect', [this.mosaic_id, this.version, x, y, w, h], function(res) {
+      return this._('find_by_rect', [this.mosaic_id, this.version, x, y, w, h], function(err, res) {
         massage(res);
         return cb(res);
       });
@@ -1402,13 +1410,22 @@ require.modules["/data/mosaic_source.coffee"] = function () {
     });
     handle_res = function(res) {
       dbg(['result:', res]);
-      cbs[id](res.result);
+      if (res.error != null) {
+        throw new Error('JSONRPC Error: ' + res.error);
+      }
+      cbs[id](res.error, res.result);
       return delete cbs[id];
     };
     return jQuery.post(endpoint, data, handle_res, 'json');
   };
   create = function(endpoint, id, version, cb) {
-    return rpc(endpoint, 'get_mosaic_info', [id], function(res) {
+    if (endpoint == null) {
+      throw new Error('endpoint cannot be null or undefined');
+    }
+    if (id == null) {
+      throw new Error('id cannot be null or undefined');
+    }
+    return rpc(endpoint, 'get_mosaic_info', [id], function(err, res) {
       var source, v, _i, _len, _ref, _v;
       if (version != null) {
         v = null;
@@ -1428,7 +1445,7 @@ require.modules["/data/mosaic_source.coffee"] = function () {
       if (v === null) {
         return cb('requested mosaic version not found', null);
       } else {
-        source = new MosaicSource(id, v.url, null, endpoint, id, v.version);
+        source = new MosaicSource(v.url, null, endpoint, id, v.version);
         return cb(null, source);
       }
     });

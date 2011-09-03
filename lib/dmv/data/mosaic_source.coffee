@@ -16,13 +16,21 @@ massage = ( objs ) ->
 
 class MosaicSource extends Source
   
-  constructor: ( @mosaic_id, @dzi_url, @dzi_str, @endpoint, @id, @version ) ->
+  constructor: ( @dzi_url, @dzi_str, @endpoint, @mosaic_id, @version ) ->
+    # Some Assertions
+    unless @mosaic_id?
+      throw new Error 'mosaic_id cannot be null or undefined'
+    unless @dzi_url?
+      throw new Error 'dzi_url cannot be null or undefined'
+    unless @version?
+      throw new Error '(mosaic) version cannot be null or undefined'
+    
     # TODO: remove this once Eduardo adds cross domain permissions to generators
     @dzi_str =  '<Image xmlns="http://schemas.microsoft.com/deepzoom/2008" TileSize="254" Overlap="1" Format="jpg"><Size Width="7500" Height="5000"/></Image>'
   
   # id --> one Cell or null
   by_id : ( id, cb ) ->
-    @_ 'find_by_image', [@mosaic_id, @version, id], ( res ) ->
+    @_ 'find_by_image', [@mosaic_id, @version, id], ( err, res ) ->
       # filter out results for other mosaics/versions
       res = ( r for r in res when ( res.id is @mosaic_id and res.version is @version ) )
       massage res
@@ -37,7 +45,7 @@ class MosaicSource extends Source
   
   # ( x, y ) -> a Cell or null
   by_coords : ( x, y, cb ) ->
-    @_ 'find_by_coord', [ @mosaic_id, @version, x, y ], ( res ) ->
+    @_ 'find_by_coord', [ @mosaic_id, @version, x, y ], ( err, res ) ->
       if res.length is 0
         cb null
       else
@@ -47,7 +55,7 @@ class MosaicSource extends Source
   # instead of asking for each coordinate,
   # this allows you to ask for a region ( save some requests )
   by_rect : ( x, y, w, h, cb ) ->
-    @_ 'find_by_rect', [@mosaic_id, @version, x, y, w, h], (res) ->
+    @_ 'find_by_rect', [@mosaic_id, @version, x, y, w, h], ( err, res ) ->
       massage res
       cb res
 
@@ -74,15 +82,21 @@ rpc = ( endpoint, method, params, cb ) ->
   data = JSON.stringify method:method, params:params, id:id, jsonrpc:'1.0'
   handle_res = ( res ) ->
     dbg [ 'result:', res ]
-    cbs[id](res.result)
+    if res.error?
+      throw new Error 'JSONRPC Error: ' + res.error
+    cbs[id] res.error, res.result
     delete cbs[id]
   jQuery.post endpoint, data, handle_res, 'json'
-
 
 # gets the source for a given mosaic
 # if version is null, then the latest version is returned
 create = ( endpoint, id, version, cb ) ->
-  rpc endpoint, 'get_mosaic_info', [id], ( res ) ->
+  # Some Assertions
+  unless endpoint?
+    throw new Error 'endpoint cannot be null or undefined'
+  unless id?
+    throw new Error 'id cannot be null or undefined'
+  rpc endpoint, 'get_mosaic_info', [id], ( err, res ) ->
     if version?
       v = null
       for _v in res.versions when v.version is version
@@ -94,7 +108,7 @@ create = ( endpoint, id, version, cb ) ->
     if v is null
       cb 'requested mosaic version not found', null
     else
-      source = new MosaicSource id, v.url, null, endpoint, id, v.version
+      source = new MosaicSource v.url, null, endpoint, id, v.version
       cb null, source
 
 
