@@ -392,68 +392,65 @@ require.modules["/core.coffee"] = function () {
       this.source = source;
     }
     Mosaic.prototype.setup = function() {
-      var cs, highlighter, viewer;
-      this.cs = cs = new cell_service_module.CellService(this.source);
-      viewer = this.mosaic_container.viewer;
-      highlighter = this.mosaic_container.highlighter;
+      var viewer;
+      this.cell_service = new cell_service_module.CellService(this.source);
       this.current_cell = null;
+      this.current_hover = null;
+      viewer = this.mosaic_container.viewer;
       this.open_handler = __bind(function() {
-        var bucket_manager, current_hover;
-        this.bm = bucket_manager = new sdutil.BufferedGridManager(viewer, 50, 100);
-        current_hover = null;
-        return $(bucket_manager).bind('change', __bind(function(event) {
-          var bucket;
-          bucket = bucket_manager.cell;
-          if (this.current_cell != null) {
-            if ((bucket != null) && this.current_cell.contains_bucket(bucket.x, bucket.y)) {
-              return;
-            } else {
-              this.current_cell = null;
-              highlighter.draw(null);
-              $(this).trigger('change');
-            }
-          }
-          if (current_hover != null) {
-            current_hover.cancel();
-            $(current_hover).unbind('change');
-          }
-          if (bucket != null) {
-            current_hover = new CellHover(bucket, cs, bucket_manager.mapper, highlighter);
-            $(current_hover).bind('change', __bind(function() {
-              if (this.current_cell !== current_hover.cell) {
-                this.current_cell = current_hover.cell;
-                return $(this).trigger('change');
-              }
-            }, this));
-            return current_hover.start();
-          }
+        this.bucket_manager = new sdutil.BufferedGridManager(viewer, 50, 100);
+        return $(this.bucket_manager).bind('change', __bind(function(event) {
+          return this.hover_on_bucket(this.bucket_manager.cell);
         }, this));
       }, this);
       viewer.addEventListener('open', this.open_handler);
       return viewer.openDzi(this.source.dzi_url, this.source.dzi_str);
     };
+    Mosaic.prototype.hover_on_bucket = function(bucket) {
+      if (this.current_cell != null) {
+        if ((bucket != null) && this.current_cell.contains_bucket(bucket.x, bucket.y)) {
+          return;
+        } else {
+          this.current_cell = null;
+          this.mosaic_container.highlighter.draw(null);
+          $(this).trigger('change');
+        }
+      }
+      if (this.current_hover != null) {
+        this.current_hover.cancel();
+        $(this.current_hover).unbind('change');
+      }
+      if (bucket != null) {
+        this.current_hover = new CellHover(bucket, this.cell_service, this.bucket_manager.mapper, this.mosaic_container.highlighter);
+        $(this.current_hover).bind('change', __bind(function() {
+          if (this.current_cell !== this.current_hover.cell) {
+            this.current_cell = this.current_hover.cell;
+            return $(this).trigger('change');
+          }
+        }, this));
+        return this.current_hover.start();
+      }
+    };
+    Mosaic.prototype.hover_on_cell = function(cell) {
+      var bucket;
+      bucket = new sd.Point;
+      bucket.x = cell.x;
+      bucket.y = cell.y;
+      bucket.inside = true;
+      return this.hover_on_bucket(bucket);
+    };
     Mosaic.prototype.go_to = function(id) {
-      return this.cs.by_id(id, __bind(function(cell) {
-        var handler, mapper, margin, mc, rect, _ref, _ref2;
+      return this.cell_service.by_id(id, __bind(function(cell) {
+        var mapper, margin, rect, _ref, _ref2;
         if (cell != null) {
-          mapper = this.bm.mapper;
+          mapper = this.bucket_manager.mapper;
           rect = cell.get_rect(mapper);
           margin = rect.width;
           rect.x = rect.x - margin;
           rect.y = rect.y - margin;
           rect.width = rect.width + margin * 2;
           rect.height = rect.height + margin * 2;
-          mc = this.mosaic_container;
-          handler = function() {
-            var _ref;
-            if (mc != null) {
-              mc.viewer.removeEventListener('animationfinish', handler);
-            }
-            return mc != null ? (_ref = mc.highlighter) != null ? _ref.draw(cell.get_rect(mapper), FOUND) : void 0 : void 0;
-          };
-          if (mc != null) {
-            mc.viewer.addEventListener('animationfinish', handler);
-          }
+          this.hover_on_cell(cell);
           return (_ref = this.mosaic_container) != null ? (_ref2 = _ref.viewer.viewport) != null ? _ref2.fitBounds(rect) : void 0 : void 0;
         } else {
           return false;
@@ -1012,7 +1009,12 @@ require.modules["/cell_service.coffee"] = function () {
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
   sd = Seadragon;
   /*
-  The service layer operates atop the source
+  The service layer operates atop the source.
+  It provides
+  * caching for remote requests
+  * some bulk optimizations ( requesting a region of cells at once )
+  * different semantics
+  No other classes/modules should use the 'source' directly. Only a cellservice instance.
   */
   Cell = (function() {
     function Cell(x, y, buckets, id) {

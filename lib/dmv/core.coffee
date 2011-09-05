@@ -39,7 +39,7 @@ class Mosaic
     @open_handler = =>
       @bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
       $(@bucket_manager).bind 'change', (event) => # every time a bucket changes...
-        @hover_on_bucket @bucket_manager.cell
+        @hover_on_bucket @bucket_manager.cell # terminology warning: cell here acutally means 'bucket'
     viewer.addEventListener 'open', @open_handler
     viewer.openDzi @source.dzi_url, @source.dzi_str
   hover_on_bucket: ( bucket ) ->
@@ -60,6 +60,14 @@ class Mosaic
           @current_cell = @current_hover.cell
           $(@).trigger 'change'
       @current_hover.start()
+  hover_on_cell: ( cell ) ->
+    # transform cell to bucket manually
+    # finding out the top-left bucket is trivial
+    bucket = new sd.Point
+    bucket.x = cell.x
+    bucket.y = cell.y
+    bucket.inside = yes
+    @hover_on_bucket bucket
   # will try to positio the viewport on the cell that has the given id
   # returns false if no id was found, etc
   go_to: ( id ) ->
@@ -79,20 +87,8 @@ class Mosaic
         # TODO: make sure we don't scroll 'out' of the mosaic
         # this may happen if the image is on or near a border
         
-        
-        # when we get to the desired position
-        # we should highlight the cell
-        # it appears as if the only way to detect the 'end' of the transition
-        # is by listening to the 'animation_end' event
-        # see: http://expression.microsoft.com/en-us/gg413351
-        # we will implement a simple solution for now
-        # calling go_to should also affect current_hover
-        # but we will get to that later on
-        mc =  @mosaic_container
-        handler = ->
-          mc?.viewer.removeEventListener 'animationfinish', handler
-          mc?.highlighter?.draw cell.get_rect(mapper), FOUND
-        mc?.viewer.addEventListener 'animationfinish', handler
+        # start a hover on the cell
+        @hover_on_cell cell
         
         # start animation
         @mosaic_container?.viewer.viewport?.fitBounds rect
