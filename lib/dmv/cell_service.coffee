@@ -1,7 +1,12 @@
 sd = Seadragon
 
 ###
-The service layer operates atop the source
+The service layer operates atop the source.
+It provides
+* caching for remote requests
+* some bulk optimizations ( requesting a region of cells at once )
+* different semantics
+No other classes/modules should use the 'source' directly. Only a cellservice instance.
 ###
 
 # TODO: clear cache after a certain heuristic to avoid mem leaks
