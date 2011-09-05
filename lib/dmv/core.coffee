@@ -11,6 +11,11 @@ PENDING = {}
 
 DEBUG = no
 
+# some configurations
+# see http://expression.microsoft.com/en-us/gg413300
+sd.Config.visibilityRatio = .7
+
+
 class MosaicContainer
   @current_cell = null
   constructor: ( @container_id ) ->

@@ -359,6 +359,7 @@ require.modules["/core.coffee"] = function () {
   NOT_FOUND = '#f00';
   PENDING = {};
   DEBUG = false;
+  sd.Config.visibilityRatio = .7;
   MosaicContainer = (function() {
     MosaicContainer.current_cell = null;
     function MosaicContainer(container_id) {
