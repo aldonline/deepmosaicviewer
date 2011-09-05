@@ -32,40 +32,40 @@ class MosaicContainer
 class Mosaic
   constructor: (@mosaic_container, @source) ->
   setup: ->
-    @cs = cs = new cell_service_module.CellService @source
-    viewer = @mosaic_container.viewer
-    highlighter = @mosaic_container.highlighter
+    @cell_service = new cell_service_module.CellService @source
     @current_cell = null
+    @current_hover = null
+    viewer = @mosaic_container.viewer
     @open_handler = =>
-      @bm = bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
-      current_hover = null
-      $(bucket_manager).bind 'change', (event) => # every time a bucket changes...
-        bucket = bucket_manager.cell
-        if @current_cell?
-          if bucket? and @current_cell.contains_bucket bucket.x, bucket.y
-            return # we are within the same cell, do nothing
-          else # exited the cell, remove current cell
-            @current_cell = null
-            highlighter.draw null
-            $(@).trigger 'change'
-        if current_hover?
-          current_hover.cancel()
-          $(current_hover).unbind 'change'
-        if bucket?
-          current_hover = new CellHover bucket, cs, bucket_manager.mapper, highlighter
-          $(current_hover).bind 'change', =>
-            if @current_cell isnt current_hover.cell
-              @current_cell = current_hover.cell
-              $(@).trigger 'change'
-          current_hover.start()
+      @bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
+      $(@bucket_manager).bind 'change', (event) => # every time a bucket changes...
+        @hover_on_bucket @bucket_manager.cell
     viewer.addEventListener 'open', @open_handler
     viewer.openDzi @source.dzi_url, @source.dzi_str
+  hover_on_bucket: ( bucket ) ->
+    if @current_cell?
+      if bucket? and @current_cell.contains_bucket bucket.x, bucket.y
+        return # we are within the same cell, do nothing
+      else # exited the cell, remove current cell
+        @current_cell = null
+        @mosaic_container.highlighter.draw null
+        $(@).trigger 'change'
+    if @current_hover?
+      @current_hover.cancel()
+      $(@current_hover).unbind 'change'
+    if bucket?
+      @current_hover = new CellHover bucket, @cell_service, @bucket_manager.mapper, @mosaic_container.highlighter
+      $(@current_hover).bind 'change', =>
+        if @current_cell isnt @current_hover.cell
+          @current_cell = @current_hover.cell
+          $(@).trigger 'change'
+      @current_hover.start()
   # will try to positio the viewport on the cell that has the given id
   # returns false if no id was found, etc
   go_to: ( id ) ->
-    @cs.by_id id, (cell) =>
+    @cell_service.by_id id, (cell) =>
       if cell?
-        mapper = @bm.mapper
+        mapper = @bucket_manager.mapper
         # get the cell's projected rectangle
         rect = cell.get_rect mapper
         
