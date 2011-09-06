@@ -399,13 +399,28 @@ require.modules["/core.coffee"] = function () {
       this.current_hover = null;
       viewer = this.mosaic_container.viewer;
       this.open_handler = __bind(function() {
+        this.zlw = new sdutil.ZoomLimitWatcher(viewer.viewport, 2, 1000);
         this.bucket_manager = new sdutil.BufferedGridManager(viewer, 50, 100);
+        $(this.zlw).bind('change', __bind(function() {
+          var buck;
+          console.log("zoom change " + this.zlw.value);
+          if (this.zlw.value) {
+            if ((buck = this.bucket_manager.cell) != null) {
+              return this.hover_on_bucket(buck);
+            }
+          } else {
+            return this.hover_on_bucket(null);
+          }
+        }, this));
         return $(this.bucket_manager).bind('change', __bind(function(event) {
-          return this.hover_on_bucket(this.bucket_manager.cell);
+          if (this.zlw.value) {
+            return this.hover_on_bucket(this.bucket_manager.cell);
+          }
         }, this));
       }, this);
       viewer.addEventListener('open', this.open_handler);
-      return viewer.openDzi(this.source.dzi_url, this.source.dzi_str);
+      viewer.openDzi(this.source.dzi_url, this.source.dzi_str);
+      return this.zoom_interval = setInterval(this.handle_zoom, 200);
     };
     Mosaic.prototype.hover_on_bucket = function(bucket) {
       if (this.current_cell != null) {
@@ -416,6 +431,8 @@ require.modules["/core.coffee"] = function () {
           this.mosaic_container.highlighter.draw(null);
           $(this).trigger('change');
         }
+      } else {
+        this.mosaic_container.highlighter.draw(null);
       }
       if (this.current_hover != null) {
         this.current_hover.cancel();
@@ -434,11 +451,15 @@ require.modules["/core.coffee"] = function () {
     };
     Mosaic.prototype.hover_on_cell = function(cell) {
       var bucket;
-      bucket = new sd.Point;
-      bucket.x = cell.x;
-      bucket.y = cell.y;
-      bucket.inside = true;
-      return this.hover_on_bucket(bucket);
+      if (cell != null) {
+        bucket = new sd.Point;
+        bucket.x = cell.x;
+        bucket.y = cell.y;
+        bucket.inside = true;
+        return this.hover_on_bucket(bucket);
+      } else {
+        return this.hover_on_bucket(null);
+      }
     };
     Mosaic.prototype.go_to = function(id) {
       return this.cell_service.by_id(id, __bind(function(cell) {
@@ -459,7 +480,10 @@ require.modules["/core.coffee"] = function () {
       }, this));
     };
     Mosaic.prototype.destroy = function() {
-      return this.mosaic_container.viewer.removeEventListener('open', this.open_handler);
+      this.mosaic_container.viewer.removeEventListener('open', this.open_handler);
+      try {
+        return this.zlw.destroy();
+      } catch (_e) {}
     };
     return Mosaic;
   })();
@@ -805,7 +829,7 @@ require.modules["/util/seadragon_util.coffee"] = function () {
     
     (function () {
         (function() {
-  var BasicGridMapper, BufferedGridManager, GridManager, Highlighter, LimitedGridMapper, ensure_sdmousemove_event, point_is_visible, sd, util;
+  var BasicGridMapper, BufferedGridManager, GridManager, Highlighter, LimitedGridMapper, ZoomLimitWatcher, ensure_sdmousemove_event, point_is_visible, sd, util;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
@@ -942,11 +966,9 @@ require.modules["/util/seadragon_util.coffee"] = function () {
     }
     Highlighter.prototype.draw = function(rect, color) {
       var drawer, elm;
-            if (color != null) {
-        color;
-      } else {
+      if (color == null) {
         color = '#ff0';
-      };
+      }
       this.hl_elm.css({
         background: color
       });
@@ -975,10 +997,37 @@ require.modules["/util/seadragon_util.coffee"] = function () {
     };
     return Highlighter;
   })();
+  /*
+  Watches for zoom changes in a Seadragon.Viewport instance.
+  Has one property called "value", which is always equal to : min_zoom < zoom < max_zoom
+  Fires a 'change' event when this property changes
+  */
+  ZoomLimitWatcher = (function() {
+    __extends(ZoomLimitWatcher, util.ValueBuffer);
+    function ZoomLimitWatcher(viewport, min_zoom, max_zoom) {
+      this.viewport = viewport;
+      this.min_zoom = min_zoom;
+      this.max_zoom = max_zoom;
+      this._check = __bind(this._check, this);
+      ZoomLimitWatcher.__super__.constructor.call(this, 100, false);
+      this.interval = setInterval(this._check, 50);
+    }
+    ZoomLimitWatcher.prototype._check = function() {
+      var _ref;
+      return this.set_value((this.min_zoom < (_ref = this.viewport.getZoom()) && _ref < this.max_zoom));
+    };
+    ZoomLimitWatcher.prototype.destroy = function() {
+      clearInterval(this.interval);
+      delete this.viewport;
+      return delete this.interval;
+    };
+    return ZoomLimitWatcher;
+  })();
   exports.point_is_visible = point_is_visible;
   exports.GridManager = GridManager;
   exports.BufferedGridManager = BufferedGridManager;
   exports.Highlighter = Highlighter;
+  exports.ZoomLimitWatcher = ZoomLimitWatcher;
 }).call(this);
 ;
     }).call(module.exports);

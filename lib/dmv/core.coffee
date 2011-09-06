@@ -37,28 +37,27 @@ class MosaicContainer
 class Mosaic
   constructor: (@mosaic_container, @source) ->
   setup: ->
-    @interactive = no
-    @interactive_limit = 4 # TODO: Calculate from mosaic dimensions
     @cell_service = new cell_service_module.CellService @source
     @current_cell = null
     @current_hover = null
     viewer = @mosaic_container.viewer
     @open_handler = =>
+      # TODO: zoom limit must be calculated from image dimensions
+      @zlw = new sdutil.ZoomLimitWatcher viewer.viewport, 2, 1000
       @bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
+      $(@zlw).bind 'change', =>
+        console.log "zoom change #{@zlw.value}"
+        if @zlw.value
+          if ( buck = @bucket_manager.cell )?
+            @hover_on_bucket buck
+        else
+          @hover_on_bucket null # remove current hover
       $(@bucket_manager).bind 'change', (event) => # every time a bucket changes...
-        if @interactive
+        if @zlw.value
           @hover_on_bucket @bucket_manager.cell # terminology warning: cell here acutally means 'bucket'
     viewer.addEventListener 'open', @open_handler
     viewer.openDzi @source.dzi_url, @source.dzi_str
     @zoom_interval = setInterval @handle_zoom , 200
-  handle_zoom: =>
-    zoom = @mosaic_container.viewer.viewport.getZoom()
-    # depending on zoom, we will turn on/off UI interaction
-    new_interactive = zoom > @interactive_limit
-    if @interactive isnt new_interactive
-      @interactive = new_interactive
-      unless @interactive
-        @hover_on_bucket null # remove current hover
   hover_on_bucket: ( bucket ) ->
     if @current_cell?
       if bucket? and @current_cell.contains_bucket bucket.x, bucket.y
@@ -90,7 +89,7 @@ class Mosaic
       @hover_on_bucket bucket
     else
       @hover_on_bucket null
-  # will try to positio the viewport on the cell that has the given id
+  # will try to position the viewport on the cell that has the given id
   # returns false if no id was found, etc
   go_to: ( id ) ->
     @cell_service.by_id id, (cell) =>
@@ -118,7 +117,8 @@ class Mosaic
         no
   destroy: ->
     @mosaic_container.viewer.removeEventListener 'open', @open_handler
-    clearInterval @zoom_interval
+    try
+       @zlw.destroy()
 
 # A cell hover represents the user gesture of hovering over a cell
 # The important thing about this object is that it contains the lifecycle
