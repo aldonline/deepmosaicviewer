@@ -37,6 +37,8 @@ class MosaicContainer
 class Mosaic
   constructor: (@mosaic_container, @source) ->
   setup: ->
+    @interactive = no
+    @interactive_limit = 4 # TODO: Calculate from mosaic dimensions
     @cell_service = new cell_service_module.CellService @source
     @current_cell = null
     @current_hover = null
@@ -44,9 +46,19 @@ class Mosaic
     @open_handler = =>
       @bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
       $(@bucket_manager).bind 'change', (event) => # every time a bucket changes...
-        @hover_on_bucket @bucket_manager.cell # terminology warning: cell here acutally means 'bucket'
+        if @interactive
+          @hover_on_bucket @bucket_manager.cell # terminology warning: cell here acutally means 'bucket'
     viewer.addEventListener 'open', @open_handler
     viewer.openDzi @source.dzi_url, @source.dzi_str
+    @zoom_interval = setInterval @handle_zoom , 200
+  handle_zoom: =>
+    zoom = @mosaic_container.viewer.viewport.getZoom()
+    # depending on zoom, we will turn on/off UI interaction
+    new_interactive = zoom > @interactive_limit
+    if @interactive isnt new_interactive
+      @interactive = new_interactive
+      unless @interactive
+        @hover_on_bucket null # remove current hover
   hover_on_bucket: ( bucket ) ->
     if @current_cell?
       if bucket? and @current_cell.contains_bucket bucket.x, bucket.y
@@ -55,6 +67,8 @@ class Mosaic
         @current_cell = null
         @mosaic_container.highlighter.draw null
         $(@).trigger 'change'
+    else
+      @mosaic_container.highlighter.draw null
     if @current_hover?
       @current_hover.cancel()
       $(@current_hover).unbind 'change'
@@ -66,13 +80,16 @@ class Mosaic
           $(@).trigger 'change'
       @current_hover.start()
   hover_on_cell: ( cell ) ->
-    # transform cell to bucket manually
-    # finding out the top-left bucket is trivial
-    bucket = new sd.Point
-    bucket.x = cell.x
-    bucket.y = cell.y
-    bucket.inside = yes
-    @hover_on_bucket bucket
+    if cell?
+      # transform cell to bucket manually
+      # finding out the top-left bucket is trivial
+      bucket = new sd.Point
+      bucket.x = cell.x
+      bucket.y = cell.y
+      bucket.inside = yes
+      @hover_on_bucket bucket
+    else
+      @hover_on_bucket null
   # will try to positio the viewport on the cell that has the given id
   # returns false if no id was found, etc
   go_to: ( id ) ->
@@ -101,6 +118,7 @@ class Mosaic
         no
   destroy: ->
     @mosaic_container.viewer.removeEventListener 'open', @open_handler
+    clearInterval @zoom_interval
 
 # A cell hover represents the user gesture of hovering over a cell
 # The important thing about this object is that it contains the lifecycle
