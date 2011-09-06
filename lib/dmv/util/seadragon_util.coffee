@@ -95,9 +95,8 @@ class BufferedGridManager
 
 class Highlighter
   constructor: ( @viewer ) ->
-     @hl_elm = $('<div>')
-  draw : ( rect, color ) ->
-    color ?= '#ff0'
+     @hl_elm = $ '<div>'
+  draw : ( rect, color = '#ff0' ) ->
     @hl_elm.css background: color
     elm = @hl_elm[0]
     drawer = @viewer.drawer
