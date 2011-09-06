@@ -46,7 +46,6 @@ class Mosaic
       @zlw = new sdutil.ZoomLimitWatcher viewer.viewport, 2, 1000
       @bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
       $(@zlw).bind 'change', =>
-        console.log "zoom change #{@zlw.value}"
         if @zlw.value
           if ( buck = @bucket_manager.cell )?
             @hover_on_bucket buck
