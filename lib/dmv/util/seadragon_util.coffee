@@ -114,8 +114,24 @@ class Highlighter
         drawer.removeOverlay elm
     @last_rect = rect
 
+###
+Watches for zoom changes in a Seadragon.Viewport instance.
+Has one property called "value", which is always equal to : min_zoom < zoom < max_zoom
+Fires a 'change' event when this property changes
+###
+class ZoomLimitWatcher extends util.ValueBuffer
+  constructor: ( @viewport, @min_zoom, @max_zoom ) ->
+    super 100, false
+    @interval = setInterval @_check, 50
+  _check : =>
+    @set_value @min_zoom < @viewport.getZoom() < @max_zoom
+  destroy: ->
+    clearInterval @interval
+    delete @viewport
+    delete @interval
 
 exports.point_is_visible = point_is_visible
 exports.GridManager = GridManager
 exports.BufferedGridManager = BufferedGridManager
 exports.Highlighter = Highlighter
+exports.ZoomLimitWatcher = ZoomLimitWatcher
