@@ -45,6 +45,9 @@ class Mosaic
       # TODO: zoom limit must be calculated from image dimensions
       @zlw = new sdutil.ZoomLimitWatcher viewer.viewport, 2, 1000
       @bucket_manager = new sdutil.BufferedGridManager viewer, 50, 100
+      # one second afer initialization, zoom out
+      # this is just a nice visual effect
+      setTimeout (-> viewer.viewport.zoomBy .7), 1000
       $(@zlw).bind 'change', =>
         if @zlw.value
           if ( buck = @bucket_manager.cell )?
@@ -56,7 +59,6 @@ class Mosaic
           @hover_on_bucket @bucket_manager.cell # terminology warning: cell here acutally means 'bucket'
     viewer.addEventListener 'open', @open_handler
     viewer.openDzi @source.dzi_url, @source.dzi_str
-    @zoom_interval = setInterval @handle_zoom , 200
   hover_on_bucket: ( bucket ) ->
     if @current_cell?
       if bucket? and @current_cell.contains_bucket bucket.x, bucket.y
